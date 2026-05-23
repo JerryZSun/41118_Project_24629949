@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go-Kart Racing Line Optimisation — Jerry Sun</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.7;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #c0392b 0%, #8e1a10 50%, #0a0a0a 100%);
+            padding: 80px 40px;
+            text-align: center;
+            border-bottom: 2px solid #c0392b;
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+        .hero p { font-size: 1.1rem; color: #f0c0bc; margin-bottom: 6px; }
+        .hero .meta { font-size: 0.95rem; color: #aaa; margin-top: 16px; }
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 4px;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+        section { padding: 60px 0; border-bottom: 1px solid #1e1e1e; }
+
+        h2 {
+            font-size: 1.7rem;
+            color: #e74c3c;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #c0392b;
+            display: inline-block;
+        }
+        h3 { font-size: 1.1rem; color: #ffffff; margin: 28px 0 10px 0; }
+        p { margin-bottom: 14px; color: #ccc; }
+
+        .team-card {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 24px 28px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .team-card p { margin: 4px 0; color: #ccc; }
+        .team-card strong { color: #fff; }
+
+        .img-placeholder {
+            background: #141414;
+            border: 2px dashed #333;
+            border-radius: 8px;
+            width: 100%;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 0.95rem;
+            margin: 16px 0;
+            text-align: center;
+        }
+
+        .img-full {
+            width: 100%;
+            border-radius: 8px;
+            margin: 16px 0;
+            border: 1px solid #2a2a2a;
+        }
+
+        .img-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 16px 0;
+        }
+
+        .video-placeholder {
+            background: #141414;
+            border: 2px dashed #333;
+            border-radius: 8px;
+            width: 100%;
+            height: 380px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 0.95rem;
+            margin: 16px 0;
+            text-align: center;
+        }
+
+        pre {
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 16px 20px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.88rem;
+            color: #a8d8a8;
+            overflow-x: auto;
+            margin: 12px 0 20px 0;
+        }
+
+        code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.88rem;
+            color: #a8d8a8;
+        }
+
+        .iteration {
+            background: #111;
+            border-left: 3px solid #c0392b;
+            border-radius: 0 8px 8px 0;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+        .iteration h3 { margin-top: 0; color: #e74c3c; }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .result-card {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .result-card .value { font-size: 2rem; font-weight: 700; color: #e74c3c; }
+        .result-card .label { font-size: 0.85rem; color: #888; margin-top: 4px; }
+
+        ul { padding-left: 20px; color: #ccc; margin-bottom: 14px; }
+        ul li { margin-bottom: 6px; }
+
+        footer { text-align: center; padding: 40px; color: #444; font-size: 0.85rem; }
+        a { color: #e74c3c; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="container">
+        <h1>Go-Kart Racing Line Optimisation</h1>
+        <p>Using Reinforcement Learning in PyBullet</p>
+        <div style="margin-top: 20px;">
+            <span class="badge">41118 AI for Robotics</span>
+            <span class="badge">University of Technology Sydney</span>
+            <span class="badge">PPO · PyBullet · Stable-Baselines3</span>
+        </div>
+        <p class="meta">Jerry Sun — 24629949</p>
+        <div style="margin-top: 16px;">
+            <a href="https://github.com/JerryZSun/41118_Project_24629949" target="_blank" style="color:#f0c0bc; margin: 0 12px;">GitHub Repository</a>
+            <a href="https://youtu.be/ES756Fufbms" target="_blank" style="color:#f0c0bc; margin: 0 12px;">Demo Video</a>
+        </div>
+    </div>
+</div>
+
+<!-- ABSTRACT -->
+<section>
+    <div class="container">
+        <h2>Abstract</h2>
+        <p>
+            This project applies Proximal Policy Optimization (PPO) to train a simulated go-kart to
+            autonomously discover an optimal racing line around a closed circuit track. The agent is
+            given no explicit knowledge of the correct path. Instead it receives rewards for forward
+            progress and speed, and learns through interaction with the environment in a custom
+            PyBullet simulation.
+        </p>
+        <p>
+            The observation space uses ray-cast wall distances rather than a centreline lookahead,
+            allowing the agent to navigate by spatial awareness rather than following a guide.
+            Progress is tracked using polyline arc-length projection, which correctly handles lap
+            boundaries and generalises to any track shape. After 700,000 training timesteps across
+            4 parallel environments, the agent consistently completes laps and shows emergent
+            racing line behaviour through corners.
+        </p>
+        <!-- Replace with PyBullet simulation screenshot -->
+        <img src="simulation.png" alt="PyBullet simulation" class="img-full"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="img-placeholder" style="display:none;">[ Insert PyBullet simulation screenshot ]</div>
+    </div>
+</section>
+
+<!-- AUTHOR -->
+<section>
+    <div class="container">
+        <h2>Author</h2>
+        <div class="team-card">
+            <p><strong>Jerry Sun</strong></p>
+            <p>Student ID: 24629949</p>
+            <p>Mechatronics Engineering — UTS</p>
+            <p>
+                <a href="https://github.com/JerryZSun/41118_Project_24629949" target="_blank">GitHub</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- VIDEO -->
+<section>
+    <div class="container">
+        <h2>Demo Video</h2>
+        <p>A demonstration of the trained agent completing laps and the path visualisation output.</p>
+        <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px; margin:16px 0;">
+            <iframe
+                src="https://www.youtube.com/embed/ES756Fufbms"
+                style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; border-radius:8px;"
+                allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+</section>
+
+<!-- INSTALLATION -->
+<section>
+    <div class="container">
+        <h2>Installation and Running</h2>
+
+        <h3>Requirements</h3>
+        <p>Python 3.11 · Microsoft C++ Build Tools with "Desktop development with C++" · Windows</p>
+
+        <h3>Create and activate virtual environment</h3>
+        <pre>python -m venv venv
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\venv\Scripts\Activate.ps1</pre>
+
+        <h3>Install dependencies</h3>
+        <pre>pip install gymnasium pybullet stable-baselines3[extra] numpy matplotlib</pre>
+
+        <h3>Train</h3>
+        <pre>python train.py</pre>
+
+        <h3>Monitor with TensorBoard</h3>
+        <pre>.\venv\Scripts\Activate.ps1
+tensorboard --logdir=./ppo_tensorboard/</pre>
+        <p>Open <a href="http://localhost:6006/" target="_blank">http://localhost:6006/</a> in your browser.</p>
+
+        <h3>Test</h3>
+        <pre>.\venv\Scripts\Activate.ps1
+python test.py</pre>
+        <p>Path visualisation images are saved to the <code>output/</code> folder after each episode.</p>
+
+        <h3>Curriculum Learning</h3>
+        <p>To continue training from a saved model rather than starting from scratch, uncomment this line in <code>train.py</code>:</p>
+        <pre># model = PPO.load(MODEL_SAVE_PATH, env=env)</pre>
+    </div>
+</section>
+
+<!-- OVERVIEW -->
+<section>
+    <div class="container">
+        <h2>Overview of the Project</h2>
+        <p>
+            This project was completed as an extension of AI for Robotics (41118). The challenge was
+            to train a simulated go-kart to autonomously discover an optimal racing line around a
+            circuit using reinforcement learning. The agent had to learn purely through environment
+            interaction, receiving rewards for speed and forward progress while being penalised for
+            leaving the track.
+        </p>
+
+        <h3>Functional Requirements</h3>
+
+        <p><strong>Environment and Track</strong></p>
+        <ul>
+            <li>Simulated circuit built in PyBullet using a rounded rectangle layout with straight wall sections and circular corner arcs built directly from circle geometry</li>
+            <li>Physical wall collisions enforced by static PyBullet box segments</li>
+            <li>Car spawned at a fixed starting position on the track</li>
+        </ul>
+
+        <p><strong>Observation Space</strong></p>
+        <ul>
+            <li>7 ray-cast wall distances spread across a 180° forward arc</li>
+            <li>Current forward speed</li>
+            <li>Normalised lap progress</li>
+            <li>Previous smoothed steering value</li>
+        </ul>
+
+        <p><strong>Reward Function</strong></p>
+        <ul>
+            <li>Forward arc-length progress reward scaled by 15.0 per metre</li>
+            <li>Speed reward scaled by 3.0 per m/s</li>
+            <li>Off-track penalty of -50.0</li>
+            <li>Step penalty of -0.05 per frame</li>
+            <li>Steering smoothness penalty of -2.5 per unit of steering change</li>
+        </ul>
+
+        <p><strong>Training Pipeline</strong></p>
+        <ul>
+            <li>PPO algorithm from Stable-Baselines3 with MlpPolicy</li>
+            <li>4 parallel environments using SubprocVecEnv</li>
+            <li>TensorBoard logging for training monitoring</li>
+            <li>Checkpoint saving every 50,000 steps</li>
+            <li>Path visualisation outputting a top-down driven line image per episode</li>
+        </ul>
+    </div>
+</section>
+
+<!-- DESIGN ITERATIONS -->
+<section>
+    <div class="container">
+        <h2>Design Iterations</h2>
+
+        <div class="iteration">
+            <h3>Iteration 1 — Initial Environment and PPO Setup</h3>
+            <p>
+                The project was altered from the second assignment. The goal, obstacle, and scenario
+                logic were removed and replaced with a closed circuit track. The first fix required was
+                the car spawn position. The original <code>car.py</code> hardcoded
+                <code>basePosition=[0, 0, 0.1]</code> meaning the car always spawned at the origin.
+                This was fixed by adding <code>base_position</code> and <code>base_orientation</code>
+                arguments to the Car constructor. The track was built using direct geometry, straight
+                walls as single long boxes and corner walls as arc segments computed directly from
+                circle equations.
+            </p>
+            <p>
+                The initial observation space used a centreline lookahead point converted into
+                car-relative coordinates using PyBullet's <code>invertTransform</code> and
+                <code>multiplyTransforms</code>. Progress was tracked using the angle of the car's
+                position on the centreline ellipse.
+            </p>
+            <p>PPO was configured with the following hyperparameters:</p>
+            <ul>
+                <li><code>learning_rate = 0.0003</code></li>
+                <li><code>n_steps = 512</code></li>
+                <li><code>batch_size = 256</code></li>
+                <li><code>ent_coef = 0.01</code></li>
+                <li><code>total_timesteps = 300,000</code></li>
+                <li><code>n_envs = 4</code></li>
+            </ul>
+            <p>
+                Two track shapes were explored. The first was an elliptical oval using
+                <code>TRACK_OUTER_A=12, TRACK_OUTER_B=8, TRACK_INNER_A=8, TRACK_INNER_B=4</code>.
+                The second was a rounded rectangle with <code>STRAIGHT_LEN=14, CORNER_RADIUS=5,
+                TRACK_WIDTH=5</code> which provided clearer straight sections and tighter hairpin
+                corners. The rounded rectangle was selected as the primary track going forward.
+            </p>
+        </div>
+
+        <div class="iteration">
+            <h3>Iteration 2 — Centreline Hugging Diagnosis and Fix</h3>
+            <p>
+                After initial training the agent consistently followed the centreline regardless of reward
+                shaping. The lookahead target was computed directly from the centreline, so the agent
+                was always being steered toward the centre of the track regardless of what the reward
+                function said. The observation was redesigned to remove the centreline target entirely
+                and replace it with 7 ray-cast wall distances spread from -90° to +90° relative to the
+                car. The agent now navigated by sensing the available space on each side rather than
+                following a guide point, giving it the freedom to find the faster line through corners.
+            </p>
+            <p>
+                The number of rays was increased from an initial 5 to 7 to provide better spatial
+                resolution through corners. <code>max_dist</code> was set to 10.0m to give adequate
+                lookahead on the straights.
+            </p>
+        </div>
+
+        <div class="iteration">
+            <h3>Iteration 3 — Progress Tracking Overhaul</h3>
+            <p>
+                The original progress tracking used the angular position of the car projected onto the
+                centreline ellipse. The same angle could correspond to multiple positions on a
+                non-circular track, making the measurement ambiguous. It was also entirely tied to the
+                ellipse formula and would break on any other track shape.
+            </p>
+            <p>
+                This was replaced with polyline arc-length projection. The centreline was discretised
+                into 200 points forming a closed polyline. Each step the car's position was projected
+                onto the nearest segment of the polyline, returning a distance <code>s</code> in metres
+                from the start. Progress delta was computed as <code>curr_s - prev_s</code> with
+                wraparound handling at the lap boundary. Total laps were derived from
+                <code>total_distance / total_length</code>. Only positive deltas were accumulated to
+                prevent reverse reward farming.
+            </p>
+        </div>
+
+        <div class="iteration">
+            <h3>Iteration 4 — Steering Oscillation Fix</h3>
+            <p>
+                After switching to ray-cast observations the agent completed laps but exhibited
+                continuous left-right oscillation. Three changes were made together to address this.
+            </p>
+            <p>
+                First, exponential moving average smoothing was applied to the steering output before
+                passing it to the car. The smoothed steering was computed each step as
+                <code>0.6 × prev + 0.4 × requested</code>, meaning the car physically could not
+                execute instantaneous large steering changes. Second, a 2-step rolling average was
+                applied to the raw ray distances using a deque buffer, smoothing flickering in the ray
+                readings caused by wall segment edges. Third, a steering smoothness penalty of
+                <code>-2.5 × |current_steering - prev_steering|</code> was added to the reward
+                function. The previous steering value was also added to the observation array so the
+                network could condition its next action on what it had just done.
+                <code>_actionRepeat</code> was reduced from 50 to 20 to allow finer control corrections.
+            </p>
+        </div>
+
+    </div>
+</section>
+
+<!-- TESTING -->
+<section>
+    <div class="container">
+        <h2>Testing the Code</h2>
+
+        <h3>TensorBoard Output</h3>
+        <p>
+            The training was monitored using TensorBoard throughout each iteration. The
+            <code>ep_rew_mean</code> graph shows the average episode reward per episode over time.
+            A successful training run shows this value climbing from negative numbers in early
+            training toward a stable positive value as the agent learns to complete laps. The
+            <code>ep_len_mean</code> graph shows average episode length — a decreasing value means
+            the agent is completing laps faster.
+        </p>
+        <p>
+            The entropy loss graph shows how random the agent's policy is over time. A high entropy
+            early in training indicates broad exploration. As training progresses entropy should
+            decrease as the policy becomes more confident. A healthy training run shows a gradual
+            entropy decrease that stabilises alongside the reward convergence.
+        </p>
+        <!-- Replace tensorboard.png with your actual screenshot filename -->
+        <img src="tensorboard.png" alt="TensorBoard output" class="img-full"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="img-placeholder" style="display:none;">[ Insert TensorBoard screenshot ]</div>
+
+        <h3>Racing Line Expected Output</h3>
+        <p>
+            The expected path visualisation shows the agent deviating from the centreline through
+            each corner in a characteristic pattern. On corner entry the path should sit wide before
+            cutting inward to clip the apex at the tightest point of the bend. This wide-entry
+            tight-exit pattern is the geometrically optimal line through a corner as it maximises
+            the effective corner radius, allowing the agent to carry more speed through the bend.
+        </p>
+        <!-- Replace expected_line.png with your actual image filename -->
+        <img src="expected_line.png" alt="Expected racing line" class="img-full"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="img-placeholder" style="display:none;">[ Insert expected racing line diagram ]</div>
+
+        <h3>Racing Line Deep Machine Learning Output</h3>
+        <p>
+            The path visualisation shows the driven line for each test episode overlaid on the track
+            boundaries, coloured from dark purple at episode start to yellow at episode end. The
+            agent's path shows the wide-entry tight-exit pattern at the u-turns, matching the
+            expected output above.
+        </p>
+        <!-- Replace episode_1_path.png with your actual output image filename -->
+        <img src="episode_1_path.png" alt="Episode 1 driven path" class="img-full"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="img-placeholder" style="display:none;">[ Insert episode path visualisation ]</div>
+    </div>
+</section>
+
+<!-- EVALUATION -->
+<section>
+    <div class="container">
+        <h2>Evaluation, Feedback, and Reflection</h2>
+
+        <h3>Accomplishments and Achievements</h3>
+        <p>
+            The project delivered a functioning RL pipeline for autonomous racing line discovery in
+            simulation. The agent learned to complete laps consistently with the reward curve
+            converging positively. The most significant technical achievement was redesigning the
+            observation space from lookahead to ray-cast, removing the implicit guidance preventing
+            the agent from exploring the full track width. The arc-length projection progress tracking
+            system correctly handled lap boundaries and generalised to any track shape. The path
+            visualisation tool gave immediate visual feedback after each training run.
+        </p>
+
+        <h3>Challenges and Obstacles</h3>
+        <p>
+            The centreline hugging problem was the most persistent challenge. The initial hypothesis
+            that the reward function was at fault was incorrect. The root cause was in the observation
+            space, not the reward. Identifying this required stepping back from reward shaping
+            entirely and reconsidering what information the agent was actually receiving.
+        </p>
+        <p>
+            Steering oscillation was reduced significantly through action smoothing and a smoothness
+            penalty but never fully eliminated. Track design was also a recurring challenge. Several
+            layouts were attempted and abandoned before settling on the rounded rectangle with direct
+            geometry wall construction, which proved reliable but limited the visibility of the racing
+            line due to its symmetric corner shape.
+        </p>
+
+        <h3>Design Decisions and Impact</h3>
+        <p>
+            Using ray-cast wall distances instead of a centreline lookahead was the most impactful
+            decision, shifting the agent from following a guide to navigating by spatial awareness.
+            Arc-length projection replaced the angular progress method which was unreliable near the
+            lap boundary and tied to ellipse geometry. Action smoothing as a physical constraint was
+            more effective than the reward penalty alone for reducing oscillation since it enforced
+            the behaviour directly rather than incentivising it.
+        </p>
+        <p>
+            If continuing this project, a more complex track would be the first priority. The symmetric
+            corners limit how far the racing line can deviate from centre, which is the primary thing
+            the project aims to demonstrate.
+        </p>
+    </div>
+</section>
+
+<!-- REFERENCES -->
+<section>
+    <div class="container">
+        <h2>References</h2>
+        <p>Schulman, J. et al. (2017). Proximal Policy Optimization Algorithms. arXiv:1707.06347.</p>
+        <p>Stable-Baselines3: <a href="https://stable-baselines3.readthedocs.io" target="_blank">stable-baselines3.readthedocs.io</a></p>
+        <p>PyBullet Physics Engine: <a href="https://pybullet.org" target="_blank">pybullet.org</a></p>
+        <p>Gymnasium: <a href="https://gymnasium.farama.org" target="_blank">gymnasium.farama.org</a></p>
+    </div>
+</section>
+
+<footer>
+    <p>Jerry Sun · 24629949 · 41118 AI for Robotics · University of Technology Sydney · 2026</p>
+    <p style="margin-top: 8px;">
+        <a href="https://github.com/JerryZSun/41118_Project_24629949" target="_blank">GitHub</a> ·
+        <a href="https://youtu.be/ES756Fufbms" target="_blank">Demo Video</a>
+    </p>
+</footer>
+
+</body>
+</html>
